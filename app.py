@@ -35,11 +35,36 @@ def login():
     else:
         return jsonify({'status': res[0][0]})
 
+@app.route('/register', methods=['POST'])
+def register():
+    params = request.get_json()
+    username = params["username"]
+    first_name = params["first_name"]
+    last_name = params["last_name"]
+    password = params["password"]
+    mobile_num = params["mobile_num"]
+    admin_prev = params["admin_prev"]
+    address = params["address"]
+    reg_key = params["reg_key"]
+    res = spcall('register', (username,first_name,last_name,password,mobile_num,admin_prev,address,reg_key), True)
 
-# /register/'joren111'/'jor'/'pacaldo'/'celeron0912'/'09156086751'/True
-@app.route('/register/<string:username>/<string:name>/<string:fname>/<string:password>/<string:mobnum>/<string:admin_prev>')
-def register(username,name,fname,password,mobnum,admin_prev):
-    res = spcall('register', (username, name, fname, password, mobnum, admin_prev), True)
+    if 'Error' in res[0][0]:
+        return jsonify({'status': 'error', 'message': res[0][0]})
+    else:
+        return res[0][0]
+
+@app.route('/register_admin', methods=['POST'])
+def register_admin():
+    params = request.get_json()
+    username = params["username"]
+    first_name = params["first_name"]
+    last_name = params["last_name"]
+    password = params["password"]
+    mobile_num = params["mobile_num"]
+    admin_prev = params["admin_prev"]
+    address = params["address"]
+    g_name = params["group_name"]
+    res = spcall('register_admin', (username,first_name,last_name,password,mobile_num,admin_prev,g_name,address), True)
 
     if 'Error' in res[0][0]:
         return jsonify({'status': 'error', 'message': res[0][0]})
