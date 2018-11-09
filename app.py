@@ -39,19 +39,20 @@ def login():
 def register():
     params = request.get_json()
     username = params["username"]
-    first_name = params["first_name"]
-    last_name = params["last_name"]
+    firstname = params["firstname"]
+    lastname = params["lastname"]
     password = params["password"]
-    mobile_num = params["mobile_num"]
-    admin_prev = params["admin_prev"]
+    number = params["number"]
     address = params["address"]
     reg_key = params["reg_key"]
-    res = spcall('register', (username,first_name,last_name,password,mobile_num,admin_prev,address,reg_key), True)
+    res = spcall('register', (username,firstname,lastname,password,number,False,address,reg_key), True)
 
     if 'Error' in res[0][0]:
         return jsonify({'status': 'error', 'message': res[0][0]})
+    elif 'Invalid' in res[0][0]:
+        return jsonify({'status': 'error', 'reason': 'Invalid Registration Key', 'message': res[0][0]})
     else:
-        return res[0][0]
+        return jsonify({'status': 'ok', 'user': res[0][0]})
 
 @app.route('/register_admin', methods=['POST'])
 def register_admin():
@@ -80,6 +81,19 @@ def dashboard(id):
     for r in res:
         recs.append({"firstname": r[0],"lastname": r[1], "mobile_number": r[2], "admin_prev": str(r[3])})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
+@app.route('/validate', methods=['POST'])
+def validator():
+    params = request.get_json()
+    username = params["username"]
+    res = spcall('username_validator', (username,),)
+
+    if 'Error' in res[0][0]:
+        return jsonify({'status': 'error', 'message': res[0][0]})
+    elif 'exist' in res[0][0]:
+        return jsonify({'status': 'error', 'message': res[0][0], 'specific': 'exist'})
+    else:
+        return jsonify({'status': res[0][0]})
 
 @app.after_request
 def add_cors(resp):
