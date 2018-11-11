@@ -54,7 +54,7 @@ def register():
     else:
         return jsonify({'status': 'ok', 'user': res[0][0]})
 
-@app.route('/register_admin', methods=['POST'])
+@app.route('/registration_admin', methods=['POST'])
 def register_admin():
     params = request.get_json()
     username = params["username"]
@@ -94,6 +94,35 @@ def validator():
         return jsonify({'status': 'error', 'message': res[0][0], 'specific': 'exist'})
     else:
         return jsonify({'status': res[0][0]})
+
+@app.route('/bill/<string:id>', methods=['GET'])
+def get_bill_date(id):
+
+    res = spcall('get_bills', (id,),)
+
+    recs = []
+
+    for r in res:
+        recs.append({"id": r[0], "date": r[1], "due_date": r[2], "reading": r[3], "amount": str(r[4]), "cubic_meters": r[5]})
+    return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
+@app.route('/billing', methods=['POST'])
+def register_admin():
+    params = request.get_json()
+    username = params["username"]
+    first_name = params["first_name"]
+    last_name = params["last_name"]
+    password = params["password"]
+    mobile_num = params["mobile_num"]
+    admin_prev = params["admin_prev"]
+    address = params["address"]
+    g_name = params["group_name"]
+    res = spcall('register_admin', (username,first_name,last_name,password,mobile_num,admin_prev,g_name,address), True)
+
+    if 'Error' in res[0][0]:
+        return jsonify({'status': 'error', 'message': res[0][0]})
+    else:
+        return res[0][0]
 
 @app.after_request
 def add_cors(resp):

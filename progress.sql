@@ -17,7 +17,8 @@ create table "bills"
   reading int,
   date_of_bill date NOT NULL DEFAULT CURRENT_DATE,
   due_date date,
-  amount int,
+  amount decimal(8,2),
+  cubic_meters int,
   status text
 );
 
@@ -121,11 +122,49 @@ $$
 $$
 LANGUAGE plpgsql;
 
-create or replace function get_bills(out text, out text, out int, out int, out text) returns setof record as
+create or replace function get_bills(in par_id text,out int, out text, out text, out int, out numeric , out int) returns setof record as
 $$
-   SELECT TO_CHAR(date_of_bill, 'mm/dd/yyyy'),TO_CHAR(due_date, 'mm/dd/yyyy'),reading, amount, status from bills;
+   SELECT bill_id,TO_CHAR(date_of_bill, 'mm/dd/yyyy'),TO_CHAR(due_date, 'mm/dd/yyyy'),reading, amount, cubic_meters from bills
+   where b_userID::text = par_id;;
 $$
  language 'sql';
+
+create or replace function get_onebill(in par_id text, out text, out text, out int, out int, out int) returns setof record as
+$$
+   SELECT TO_CHAR(date_of_bill, 'Mon dd, yyyy'),TO_CHAR(due_date, 'Mon dd, yyyy'),reading, amount, cubic_meters from bills
+   where bill_id::text = par_id;
+$$
+language 'sql';
+
+create or replace function get_allbill(in par_id text,out int, out text, out text) returns setof record as
+$$
+   SELECT bill_id,TO_CHAR(date_of_bill, 'mm/dd/yyyy'),TO_CHAR(due_date, 'mm/dd/yyyy') from bills
+   where b_userID::text = par_id;
+$$
+language 'sql';
+
+create or replace function add_bill(in par_username text, in par_password text) returns text as
+$$
+  declare
+    loc_user text;
+    loc_res text;
+  begin
+     select into loc_user acc_id from account
+       where username = par_username and password = par_password;
+
+     if loc_user isnull then
+       loc_res = 'Error';
+     else
+       loc_res = loc_user;
+     end if;
+     return loc_res;
+  end;
+$$
+LANGUAGE plpgsql;
+
+--THIS SELECTS THE LATEST BILL INSERTED
+-- select * from bills
+-- where date_of_bill = (select max(date_of_bill) from bills)
 
 -- select reading from bills
 -- where b_userid = 1
