@@ -72,7 +72,7 @@ def register_admin():
     else:
         return res[0][0]
 
-@app.route('/dashboard/<string:id>', methods=['GET'])
+@app.route('/user/<string:id>', methods=['GET'])
 def dashboard(id):
     res = spcall('user_credentials', (id,),)
 
@@ -103,26 +103,49 @@ def get_bill_date(id):
     recs = []
 
     for r in res:
-        recs.append({"id": r[0], "date": r[1], "due_date": r[2], "reading": r[3], "amount": str(r[4]), "cubic_meters": r[5]})
+        recs.append({"id": r[0], "date": r[1], "due_date": r[2], "reading": r[3], "amount": str(r[4]), "cubic_meters": r[5], "status": r[6]})
+    return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
+@app.route('/users', methods=['GET'])
+def users():
+
+    res = spcall('get_names', (),)
+
+    recs = []
+
+    for r in res:
+        recs.append({"id": r[0], "lastname": r[1], "firstname": r[2]})
+    return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
+@app.route('/search/<string:name>', methods=['GET'])
+def search(name):
+
+    res = spcall('searchbill', (name,),)
+
+    recs = []
+
+    for r in res:
+        recs.append({"id": r[0], "firstname": r[1], "lastname": r[2], "address": r[3]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
 @app.route('/billing', methods=['POST'])
-def register_admin():
+def billing():
     params = request.get_json()
-    username = params["username"]
-    first_name = params["first_name"]
-    last_name = params["last_name"]
-    password = params["password"]
-    mobile_num = params["mobile_num"]
-    admin_prev = params["admin_prev"]
-    address = params["address"]
-    g_name = params["group_name"]
-    res = spcall('register_admin', (username,first_name,last_name,password,mobile_num,admin_prev,g_name,address), True)
+    cur_user = params["cur_user"]
+    cur_date = params["cur_date"]
+    due_date = params["due_date"]
+    reading = params["reading"]
+    rate = params["rate"]
+
+    res = spcall('add_bill', (cur_user,cur_date,due_date,reading,rate), True)
 
     if 'Error' in res[0][0]:
         return jsonify({'status': 'error', 'message': res[0][0]})
     else:
-        return res[0][0]
+        return jsonify({'status': 'ok'})
+
+
+
 
 @app.after_request
 def add_cors(resp):
