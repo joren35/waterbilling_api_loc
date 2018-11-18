@@ -4,6 +4,8 @@ import flask, sys, os
 
 app = Flask(__name__)
 app.secret_key = 'celeron0912'
+
+
 # app.config['SESSION_TYPE'] = 'filesystem'
 
 def spcall(qry, param, commit=False):
@@ -19,9 +21,11 @@ def spcall(qry, param, commit=False):
         res = [("Error: " + str(sys.exc_info()[0]) + " " + str(sys.exc_info()[1]),)]
     return res
 
+
 @app.route('/')
 def index():
     return "<h2>Welcome to WaterBillingAPI<h2>"
+
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -35,6 +39,7 @@ def login():
     else:
         return jsonify({'status': res[0][0]})
 
+
 @app.route('/register', methods=['POST'])
 def register():
     params = request.get_json()
@@ -45,7 +50,7 @@ def register():
     number = params["number"]
     address = params["address"]
     reg_key = params["reg_key"]
-    res = spcall('register', (username,firstname,lastname,password,number,False,address,reg_key), True)
+    res = spcall('register', (username, firstname, lastname, password, number, False, address, reg_key), True)
 
     if 'Error' in res[0][0]:
         return jsonify({'status': 'error', 'message': res[0][0]})
@@ -53,6 +58,7 @@ def register():
         return jsonify({'status': 'error', 'reason': 'Invalid Registration Key', 'message': res[0][0]})
     else:
         return jsonify({'status': 'ok', 'user': res[0][0]})
+
 
 @app.route('/registration_admin', methods=['POST'])
 def register_admin():
@@ -65,28 +71,31 @@ def register_admin():
     admin_prev = params["admin_prev"]
     address = params["address"]
     g_name = params["group_name"]
-    res = spcall('register_admin', (username,first_name,last_name,password,mobile_num,admin_prev,g_name,address), True)
+    res = spcall('register_admin', (username, first_name, last_name, password, mobile_num, admin_prev, g_name, address),
+                 True)
 
     if 'Error' in res[0][0]:
         return jsonify({'status': 'error', 'message': res[0][0]})
     else:
         return res[0][0]
 
+
 @app.route('/user/<string:id>', methods=['GET'])
 def dashboard(id):
-    res = spcall('user_credentials', (id,),)
+    res = spcall('user_credentials', (id,), )
 
     recs = []
 
     for r in res:
-        recs.append({"firstname": r[0],"lastname": r[1], "mobile_number": r[2], "admin_prev": str(r[3])})
+        recs.append({"firstname": r[0], "lastname": r[1], "mobile_number": r[2], "admin_prev": str(r[3])})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
 
 @app.route('/validate', methods=['POST'])
 def validator():
     params = request.get_json()
     username = params["username"]
-    res = spcall('username_validator', (username,),)
+    res = spcall('username_validator', (username,), )
 
     if 'Error' in res[0][0]:
         return jsonify({'status': 'error', 'message': res[0][0]})
@@ -95,38 +104,52 @@ def validator():
     else:
         return jsonify({'status': res[0][0]})
 
+
 @app.route('/bill/<string:id>', methods=['GET'])
 def get_bill_date(id):
-
-    res = spcall('get_bills', (id,),)
+    res = spcall('get_bills', (id,), )
 
     recs = []
 
     for r in res:
-        recs.append({"id": r[0], "date": r[1], "due_date": r[2], "reading": r[3], "amount": str(r[4]), "cubic_meters": r[5], "status": r[6]})
+        recs.append(
+            {"id": r[0], "date": r[1], "due_date": r[2], "reading": r[3], "amount": str(r[4]), "cubic_meters": r[5],
+             "status": r[6]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
 
 @app.route('/users', methods=['GET'])
 def users():
-
-    res = spcall('get_names', (),)
+    res = spcall('get_names', (), )
 
     recs = []
 
     for r in res:
-        recs.append({"id": r[0], "lastname": r[1], "firstname": r[2]})
+        recs.append({"id": r[0], "lastname": r[1], "firstname": r[2], "issued": r[3], "prev_reading":r[4]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
 
 @app.route('/search/<string:name>', methods=['GET'])
 def search(name):
-
-    res = spcall('searchbill', (name,),)
+    res = spcall('searchbill', (name,), )
 
     recs = []
 
     for r in res:
         recs.append({"id": r[0], "firstname": r[1], "lastname": r[2], "address": r[3]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
+
+@app.route('/bill/user/<string:id>', methods=['GET'])
+def user_bill(id):
+    res = spcall('get_selected_date', (id,), )
+
+    recs = []
+
+    for r in res:
+        recs.append({"reading": r[0], "date": r[1], "due_date": r[2], "amount": str(r[3]), "status": r[4], "cubic_meters": r[5]})
+    return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
 
 @app.route('/billing', methods=['POST'])
 def billing():
@@ -137,14 +160,12 @@ def billing():
     reading = params["reading"]
     rate = params["rate"]
 
-    res = spcall('add_bill', (cur_user,cur_date,due_date,reading,rate), True)
+    res = spcall('add_bill', (cur_user, cur_date, due_date, reading, rate), True)
 
     if 'Error' in res[0][0]:
         return jsonify({'status': 'error', 'message': res[0][0]})
     else:
         return jsonify({'status': 'ok'})
-
-
 
 
 @app.after_request
