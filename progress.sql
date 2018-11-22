@@ -33,7 +33,8 @@ create table "bills"
   due_date date,
   amount decimal(8,2),
   cubic_meters int,
-  status text
+  status text,
+  payment decimal(8,2)
 );
 
 create table "groups"
@@ -149,6 +150,13 @@ create or replace function get_onebill(in par_id text, out text, out text, out i
 $$
    SELECT TO_CHAR(date_of_bill, 'Mon dd, yyyy'),TO_CHAR(due_date, 'Mon dd, yyyy'),reading, amount, cubic_meters from bills
    where bill_id::text = par_id;
+$$
+language 'sql';
+
+create or replace function get_unpaid(out text, out text, out text, out decimal) returns setof record as
+$$
+   SELECT TO_CHAR(date_of_bill, 'mon yyyy'), firstname, lastname, amount from bills, account
+   where bills.b_userID = account.acc_id and bills.status = 'unpaid';
 $$
 language 'sql';
 

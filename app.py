@@ -167,6 +167,16 @@ def billing():
     else:
         return jsonify({'status': 'ok'})
 
+@app.route('/payment', methods=['GET'])
+def get_unpaid():
+    res = spcall('get_unpaid', (),)
+
+    recs = []
+
+    for r in res:
+        recs.append({"date": r[0], "firstname": r[1], "lastname": r[2], "amount": str(r[3])})
+    return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
 
 @app.after_request
 def add_cors(resp):
