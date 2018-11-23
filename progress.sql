@@ -155,7 +155,7 @@ language 'sql';
 
 create or replace function get_unpaid(out text, out text, out text, out decimal) returns setof record as
 $$
-   SELECT TO_CHAR(date_of_bill, 'mon yyyy'), firstname, lastname, amount from bills, account
+   SELECT TO_CHAR(date_of_bill, 'Month yyyy'), lastname::text ||', '|| firstname::text AS name, amount from bills, account 
    where bills.b_userID = account.acc_id and bills.status = 'unpaid';
 $$
 language 'sql';
@@ -183,7 +183,7 @@ $$
      select into loc_prevbill reading from bills
        where b_userid = par_id order by date_of_bill desc limit 1;
 
-     if loc_prevbill isnull then
+     if loc_prevbill isnull thenhttp://127.0.0.1:5050
        insert into bills(b_userID,reading,date_of_bill,amount,cubic_meters)
        values (par_id,par_reading,par_date,0,0);
        loc_res = 'ok';

@@ -174,7 +174,7 @@ def get_unpaid():
     recs = []
 
     for r in res:
-        recs.append({"date": r[0], "firstname": r[1], "lastname": r[2], "amount": str(r[3])})
+        recs.append({"date": r[0], "name": r[1], "amount": str(r[2])})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
 
