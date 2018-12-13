@@ -172,6 +172,23 @@ def search(name):
         recs.append({"id": r[0], "firstname": r[1], "lastname": r[2], "address": r[3]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
+@app.route('/users', methods=['GET'])
+def users():
+    res = spcall('get_names', (),)
+
+    recs = []
+    for r in res:
+        recs.append({"id": r[0], "lastname": r[1], "firstname": r[2], "issued": r[3], "prev_reading":r[4]})
+    return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
+@app.route('/user/bills/month/<string>', methods=['GET'])
+def billing_users():
+    res = spcall('get_names', (),)
+
+    recs = []
+    for r in res:
+        recs.append({"id": r[0], "lastname": r[1], "firstname": r[2], "issued": r[3], "prev_reading":r[4]})
+    return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
 @app.route('/bill/user/<string:id>', methods=['GET'])
 def user_bill(id):
@@ -189,11 +206,10 @@ def billing():
     params = request.get_json()
     cur_user = params["cur_user"]
     cur_date = params["cur_date"]
-    due_date = params["due_date"]
     reading = params["reading"]
     rate = params["rate"]
 
-    res = spcall('add_bill', (cur_user, cur_date, due_date, reading, rate), True)
+    res = spcall('add_bill', (cur_user, cur_date, reading, rate), True)
 
     if 'Error' in res[0][0]:
         return jsonify({'status': 'error', 'message': res[0][0]})

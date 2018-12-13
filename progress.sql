@@ -195,8 +195,8 @@ $$
        values (par_id,par_reading,par_date,0,0);
        loc_res = 'ok';
      else
-       insert into bills(b_userID,reading,date_of_bill,due_date,amount,status,cubic_meters)
-       values (par_id,par_reading,par_date,par_due,(par_reading-loc_prevbill)*par_rate,'Unpaid',par_reading-loc_prevbill);
+       insert into bills(b_userID,reading,date_of_bill,due_date,amount,status,cubic_meters,rate)
+       values (par_id,par_reading,par_date,par_due,(par_reading-loc_prevbill)*par_rate,'Unpaid',par_reading-loc_prevbill,par_rate);
        loc_res = 'ok';
      end if;
      return loc_res;
@@ -221,6 +221,17 @@ create or replace function activation_status(in par_boolean boolean, out text, o
   select concat(lastname, ', ', firstname), activation_code from account where activation_status = par_boolean
   $$
 language 'sql';
+
+create or replace function get_names(out int, out text, out text, out text, out int) returns setof record as
+$$
+   select acc_id, lastname, firstname, TO_CHAR(max(date_of_bill), 'mm/dd/yyyy'), max(reading) from account, bills where admin_prev = false and acc_id = b_userid
+   group by acc_id;
+$$
+language 'sql';
+
+--select acc_id, lastname, firstname, TO_CHAR(max(date_of_bill), 'mm/dd/yyyy'), max(reading), count(case when status like 'Unpaid' then 1 end) as Unpaid
+--from account, bills where admin_prev = false and acc_id = b_userid
+--   group by acc_id;
 
 
 --THIS SELECTS THE LATEST BILL INSERTED
