@@ -192,12 +192,12 @@ def billing_users():
 
 @app.route('/bill/user/<string:id>', methods=['GET'])
 def user_bill(id):
-    res = spcall('get_selected_date', (id,), )
+    res = spcall('get_latestbill_user', (id,), )
 
     recs = []
 
     for r in res:
-        recs.append({"reading": r[0], "date": r[1], "due_date": r[2], "amount": str(r[3]), "status": r[4], "cubic_meters": r[5]})
+        recs.append({"reading": r[0], "date_issued": r[1], "due_date": r[2], "amount": str(r[3]), "used_cm": r[4], "payment_status": r[5], "unpaid_count": r[6], "arrears": str(r[7]), "status": r[8]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
 

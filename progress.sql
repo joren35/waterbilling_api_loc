@@ -229,6 +229,34 @@ $$
 $$
 language 'sql';
 
+create or replace function get_latestbill_user(in par_id text, out int, out text, out text, out numeric, out int, out text, out bigint, out numeric, out text) returns setof record as
+$$
+   select reading, TO_CHAR(date_of_bill, 'MonthDD, YYYY'),TO_CHAR(due_date, 'MonthDD, YYYY'),
+   amount, cubic_meters, status, used_byQuery2(par_id), used_byQuery1(par_id),
+   case when used_byQuery2(par_id) > 2 then 'Disconnection' else 'ok' end
+   from bills
+   where date_of_bill = (select max(date_of_bill) from bills where b_userid::text = par_id) and b_userid::text = par_id
+$$
+language 'sql';
+
+create or replace function used_byQuery1(in par_id text,out numeric) returns numeric as
+$$
+	select COALESCE (sum(amount),0.00)
+	from bills
+	where b_userid::text = '51' and
+			date_of_bill < (select max(date_of_bill) from bills where b_userid::text = '51') and
+			status like 'Unpaid'
+$$
+language 'sql';
+
+create or replace function used_byQuery2(in par_id text,out bigint) returns bigint as
+$$
+	select count(case when status like 'Unpaid' then 1 end) as Unpaid
+	 from bills
+	 where b_userid::text = par_id
+$$
+language 'sql';
+
 --select acc_id, lastname, firstname, TO_CHAR(max(date_of_bill), 'mm/dd/yyyy'), max(reading), count(case when status like 'Unpaid' then 1 end) as Unpaid
 --from account, bills where admin_prev = false and acc_id = b_userid
 --   group by acc_id;
