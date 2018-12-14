@@ -229,11 +229,11 @@ $$
 $$
 language 'sql';
 
-create or replace function get_latestbill_user(in par_id text, out int, out text, out text, out numeric, out int, out text, out bigint, out numeric, out text) returns setof record as
+create or replace function get_latestbill_user(in par_id text, out int, out text, out text, out numeric, out int, out text, out bigint, out numeric, out numeric, out text) returns setof record as
 $$
    select reading, TO_CHAR(date_of_bill, 'MonthDD, YYYY'),TO_CHAR(due_date, 'MonthDD, YYYY'),
-   amount, cubic_meters, status, used_byQuery2(par_id), used_byQuery1(par_id),
-   case when used_byQuery2(par_id) > 2 then 'Disconnection' else 'ok' end
+   amount, cubic_meters, status, used_byQuery2(par_id), used_byQuery1(par_id), used_byQuery1(par_id)+amount,
+   case when used_byQuery2(par_id) > 2 then 'Disconnection' else 'Good' end
    from bills
    where date_of_bill = (select max(date_of_bill) from bills where b_userid::text = par_id) and b_userid::text = par_id
 $$
@@ -243,8 +243,8 @@ create or replace function used_byQuery1(in par_id text,out numeric) returns num
 $$
 	select COALESCE (sum(amount),0.00)
 	from bills
-	where b_userid::text = '51' and
-			date_of_bill < (select max(date_of_bill) from bills where b_userid::text = '51') and
+	where b_userid::text = par_id and
+			date_of_bill < (select max(date_of_bill) from bills where b_userid::text = par_id) and
 			status like 'Unpaid'
 $$
 language 'sql';
@@ -254,6 +254,12 @@ $$
 	select count(case when status like 'Unpaid' then 1 end) as Unpaid
 	 from bills
 	 where b_userid::text = par_id
+$$
+language 'sql';
+
+create or replace function viewpaid(in par_text text, out TEXT, out TEXT,  out text, out INT, out numeric) returns setof record as
+$$
+ select firstname, lastname, TO_CHAR(date_of_bill, 'mm/dd/yyyy'), reading, amount from account, bills where status = par_text and acc_id = b_userid ;
 $$
 language 'sql';
 

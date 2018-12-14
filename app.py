@@ -73,7 +73,8 @@ def add_account():
     date_issued = params["date_issued"]
     due_date = params["due_date"]
     s_status = params["s_status"]
-    res = spcall('add_account', (firstname, lastname, address, act_key, reading,amount,rate,cmused,date_issued,due_date,s_status), True)
+    res = spcall('add_account', (
+    firstname, lastname, address, act_key, reading, amount, rate, cmused, date_issued, due_date, s_status), True)
 
     if 'Error' in res[0][0]:
         return jsonify({'status': 'error', 'message': res[0][0]})
@@ -125,6 +126,7 @@ def validator_username():
     else:
         return jsonify({'status': res[0][0]})
 
+
 @app.route('/validate/key', methods=['POST'])
 def validator_key():
     params = request.get_json()
@@ -137,6 +139,7 @@ def validator_key():
         return jsonify({'status': 'exist', 'message': res[0][0]})
     else:
         return jsonify({'status': res[0][0]})
+
 
 @app.route('/bill/<string:id>', methods=['GET'])
 def get_bill_date(id):
@@ -172,23 +175,26 @@ def search(name):
         recs.append({"id": r[0], "firstname": r[1], "lastname": r[2], "address": r[3]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
+
 @app.route('/users', methods=['GET'])
 def users():
-    res = spcall('get_names', (),)
+    res = spcall('get_names', (), )
 
     recs = []
     for r in res:
-        recs.append({"id": r[0], "lastname": r[1], "firstname": r[2], "issued": r[3], "prev_reading":r[4]})
+        recs.append({"id": r[0], "lastname": r[1], "firstname": r[2], "issued": r[3], "prev_reading": r[4]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
-@app.route('/user/bills/month/<string>', methods=['GET'])
+
+@app.route('/user/bills/month/', methods=['GET'])
 def billing_users():
-    res = spcall('get_names', (),)
+    res = spcall('get_names', (), )
 
     recs = []
     for r in res:
-        recs.append({"id": r[0], "lastname": r[1], "firstname": r[2], "issued": r[3], "prev_reading":r[4]})
+        recs.append({"id": r[0], "lastname": r[1], "firstname": r[2], "issued": r[3], "prev_reading": r[4]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
 
 @app.route('/bill/user/<string:id>', methods=['GET'])
 def user_bill(id):
@@ -197,7 +203,9 @@ def user_bill(id):
     recs = []
 
     for r in res:
-        recs.append({"reading": r[0], "date_issued": r[1], "due_date": r[2], "amount": str(r[3]), "used_cm": r[4], "payment_status": r[5], "unpaid_count": r[6], "arrears": str(r[7]), "status": r[8]})
+        recs.append({"reading": r[0], "date_issued": r[1], "due_date": r[2], "amount": str(r[3]), "used_cm": r[4],
+                     "payment_status": r[5], "unpaid_count": r[6], "arrears": str(r[7]), "total_amount": str(r[8]),
+                     "status": r[9]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
 
@@ -215,6 +223,17 @@ def billing():
         return jsonify({'status': 'error', 'message': res[0][0]})
     else:
         return jsonify({'status': 'ok'})
+
+
+@app.route('/viewpaid/<string:views>', methods=['GET'])
+def viewpaid(views):
+    res = spcall('viewpaid', (views,), )
+
+    recs = []
+
+    for r in res:
+        recs.append({"firstname": r[0], "lastname": r[1],'date_of_bill': r[2], "reading": r[3], "amount": str(r[4])})
+    return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
 
 @app.after_request
