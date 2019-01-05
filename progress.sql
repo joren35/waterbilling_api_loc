@@ -35,7 +35,9 @@ create table "bills"
   amount decimal(8,2),
   cubic_meters int,
   rate decimal(8,2),
-  status text
+  status text,
+  newly_added boolean,
+  arrears decimal(8,2)
 );
 
 create table "groups"
@@ -107,8 +109,8 @@ $$
     insert into account(firstname,lastname,admin_prev,address,activation_status, activation_code) values
       (par_firstname, par_lastname, false, par_address, false, par_act_code);
     select into loc_user acc_id from account where activation_code = par_act_code;
-    insert into bills(b_userID,reading,date_of_bill,due_date,amount, cubic_meters,rate,status) values
-      (loc_user, par_reading, par_date, par_due, par_amount, par_cmused,par_rate,par_status);
+    insert into bills(b_userID,reading,date_of_bill,due_date,amount, cubic_meters,rate,status,newly_added) values
+      (loc_user, par_reading, par_date, par_due, par_amount, par_cmused,par_rate,par_status,false);
 
     loc_res = 'ok';
     return loc_res;
@@ -177,11 +179,11 @@ LANGUAGE plpgsql;
 create or replace function get_bills(in par_id text,out int, out text, out text, out int, out numeric , out int, out text) returns setof record as
 $$
    SELECT bill_id,TO_CHAR(date_of_bill, 'mm/dd/yyyy'),TO_CHAR(due_date, 'mm/dd/yyyy'),reading, amount, cubic_meters, status from bills
-   where b_userID::text = par_id;
+   where b_userID::text = par_id and newly_added = false;
 $$
  language 'sql';
 
-create or replace function add_bill(in par_id int, in par_date date, in par_due date, in par_reading int, in par_rate decimal) returns text as
+create or replace function add_bill(in par_id int, in par_date date, in par_reading int, in par_rate decimal) returns text as
 $$
   declare
     loc_res text;
@@ -196,7 +198,7 @@ $$
        loc_res = 'ok';
      else
        insert into bills(b_userID,reading,date_of_bill,due_date,amount,status,cubic_meters,rate)
-       values (par_id,par_reading,par_date,par_due,(par_reading-loc_prevbill)*par_rate,'Unpaid',par_reading-loc_prevbill,par_rate);
+       values (par_id,par_reading,par_date,par_date+15,(par_reading-loc_prevbill)*par_rate,'Unpaid',par_reading-loc_prevbill,par_rate);
        loc_res = 'ok';
      end if;
      return loc_res;
@@ -206,7 +208,7 @@ LANGUAGE plpgsql;
 
 create or replace function searchbill(in par_name text, out int, out TEXT, out text, out text) returns setof record as
   $$
-    select acc_id, firstname, lastname, address from account where concat(firstname, ' ',lastname) ilike par_name and admin_prev = False
+    select acc_id, firstname, lastname, address from account where concat(firstname, ' ',lastname) ilike par_name and admin_prev = False;
   $$
    language 'sql';
 
@@ -235,7 +237,7 @@ $$
    amount, cubic_meters, status, used_byQuery2(par_id), used_byQuery1(par_id), used_byQuery1(par_id)+amount,
    case when used_byQuery2(par_id) > 2 then 'Disconnection' else 'Good' end
    from bills
-   where date_of_bill = (select max(date_of_bill) from bills where b_userid::text = par_id) and b_userid::text = par_id
+   where date_of_bill = (select max(date_of_bill) from bills where b_userid::text = par_id and newly_added = false) and b_userid::text = par_id and newly_added = false
 $$
 language 'sql';
 
@@ -244,8 +246,8 @@ $$
 	select COALESCE (sum(amount),0.00)
 	from bills
 	where b_userid::text = par_id and
-			date_of_bill < (select max(date_of_bill) from bills where b_userid::text = par_id) and
-			status like 'Unpaid'
+			date_of_bill < (select max(date_of_bill) from bills where b_userid::text = par_id and newly_added = false) and
+			status like 'Unpaid' and newly_added = false
 $$
 language 'sql';
 
@@ -253,13 +255,132 @@ create or replace function used_byQuery2(in par_id text,out bigint) returns bigi
 $$
 	select count(case when status like 'Unpaid' then 1 end) as Unpaid
 	 from bills
-	 where b_userid::text = par_id
+	 where b_userid::text = par_id and newly_added = false
 $$
 language 'sql';
 
+
 create or replace function viewpaid(in par_text text, out TEXT, out TEXT,  out text, out INT, out numeric) returns setof record as
 $$
- select firstname, lastname, TO_CHAR(date_of_bill, 'mm/dd/yyyy'), reading, amount from account, bills where status = par_text and acc_id = b_userid ;
+ select firstname, lastname, TO_CHAR(date_of_bill, 'mm/dd/yyyy'), reading, amount from account, bills where status = par_text and acc_id = b_userid and newly_added = false ;
+$$
+language 'sql';
+
+create or replace function update_bill(in par_id text) returns void as
+$$
+  begin
+    update bills set status = 'Paid' where bill_id::text = par_id;
+  end
+$$
+  language plpgsql;
+
+  create or replace function get_unpaid(out int, out text, out text, out decimal) returns setof record as
+$$
+   SELECT bill_id, TO_CHAR(date_of_bill, 'Month yyyy'), lastname::text ||', '|| firstname::text AS name, amount from bills, account
+   where bills.b_userID = account.acc_id and bills.status ilike 'unpaid' and newly_added = false;
+$$
+language 'sql';
+
+create or replace function send_sms(out text, out numeric, out text) returns setof record as
+$$
+	select acc_id, mobile_num, sum(amount), TO_CHAR(max(due_date), 'Monthdd, yyyy'),count(case when status like 'Unpaid' then 1 end) from account, bills
+	where (status = 'Unpaid' and mobile_num is not null) and (b_userid = acc_id and newly_added = false)
+	group by acc_id
+$$
+language 'sql';
+
+create or replace function send_sms_date(in par_date date, out text, out text, out text, out numeric, out numeric) returns setof record as
+$$
+	select mobile_num, TO_CHAR(date_of_bill, 'Monthdd, yyyy') ,TO_CHAR(due_date, 'Monthdd, yyyy'), amount, COALESCE (arrears,0.00) from account, bills
+	where status = 'Unpaid' and mobile_num is not null  and newly_added = false and date_of_bill = par_date
+	and acc_id=b_userid
+$$
+language 'sql';
+
+create or replace function selected_dates(out text) returns setof text as
+$$
+	select TO_CHAR(date_of_bill, 'Monthdd, yyyy') from bills
+	group by date_of_bill
+	order by date_of_bill
+	desc
+$$
+language 'sql';
+
+create or replace function new_billingdate(in par_date date, in par_rate numeric) returns text as
+$$
+  declare
+    loc_res text;
+	  r int;
+  begin
+	FOR r IN select acc_id from account where admin_prev = false
+	LOOP
+	insert into bills (b_userid, date_of_bill, status, rate, newly_added)
+			VALUES (r, par_date, 'Unpaid', par_rate, true);
+	END LOOP;
+	loc_res = 'added';
+    return loc_res;
+  end;
+$$
+LANGUAGE plpgsql;
+
+create or replace function new_dateSelector(in par_date date,out int, out text, out text,out text, out boolean, out int, out date) returns setof record as
+$$
+	select bill_id, lastname, firstname, address, newly_added, reading,
+	(select date_of_bill as prev_bill from bills
+	where date_of_bill < par_date
+	order by date_of_bill desc
+	limit 1)
+	from account, bills
+	where date_of_bill = par_date and acc_id = b_userid
+$$
+language 'sql';
+
+create or replace function new_maxDate(out text) returns text as
+$$
+	select to_char(max(date_of_bill+25), 'yyyy-mm-dd') from bills
+$$
+language 'sql';
+
+create or replace function new_addbill(in par_id int, in par_reading int) returns text as
+$$
+  declare
+    loc_res text;
+    loc_prevreading int;
+	loc_date text;
+	loc_rate decimal;
+	loc_reading int;
+	loc_arrears decimal;
+  begin
+	  select reading, to_char(date_of_bill, 'MonthDD, YYYY') into loc_reading, loc_date from bills, account
+	  where date_of_bill < (select date_of_bill from bills where bill_id = par_id)
+	  	    and b_userid = (select b_userid from bills where bill_id = par_id)
+	  order by date_of_bill desc
+	  limit 1;
+	  select into loc_rate rate from bills where bill_id = par_id;
+	  select into loc_arrears COALESCE (sum(amount),0.00) from bills where b_userid =
+	  (select b_userid from bills where bill_id = par_id) and newly_added = false and status = 'Unpaid'
+	  and date_of_bill < (select date_of_bill from bills where bill_id = par_id);
+
+
+	IF loc_reading isnull THEN
+  		loc_res = loc_date;
+	ELSIF loc_reading > par_reading then
+		loc_res = 'less';
+	ELSE
+  		update bills set
+		reading = par_reading, due_date = (Now()::date + 15), amount = (par_reading-loc_reading)*loc_rate, cubic_meters = par_reading-loc_reading, newly_added = false,
+		arrears = loc_arrears
+		where bill_id = par_id and newly_added = true;
+		loc_res='ok';
+	END IF;
+	return loc_res;
+  end;
+$$
+LANGUAGE plpgsql;
+
+create or replace function get_all_mobile(out text) returns setof text as
+$$
+	select mobile_num from account where activation_status = true and mobile_num is not null
 $$
 language 'sql';
 
