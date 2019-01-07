@@ -152,7 +152,7 @@ def get_bill_date(id):
     for r in res:
         recs.append(
             {"id": r[0], "date": r[1], "due_date": r[2], "reading": r[3], "amount": str(r[4]), "cubic_meters": r[5],
-             "status": r[6]})
+             "status": r[6], "arrears": str(r[7])})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
 
@@ -393,6 +393,16 @@ def new_addbill():
         return jsonify({'status': 'ok', 'message': res[0][0]})
     else:
         return jsonify({'status': res[0][0]})
+
+
+@app.route('/bill/disconnection', methods=['GET'])
+def get_disconnection():
+    res = spcall('get_disconnection', (), )
+
+    recs = []
+    for r in res:
+        recs.append({"lastname": r[0], "firstname": r[1], "address": r[2], "mobile": r[3], "unpaid_count": r[4]})
+    return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
 
 @app.after_request

@@ -176,9 +176,9 @@ $$
 $$
 LANGUAGE plpgsql;
 
-create or replace function get_bills(in par_id text,out int, out text, out text, out int, out numeric , out int, out text) returns setof record as
+create or replace function get_bills(in par_id text,out int, out text, out text, out int, out numeric , out int, out text, out numeric) returns setof record as
 $$
-   SELECT bill_id,TO_CHAR(date_of_bill, 'mm/dd/yyyy'),TO_CHAR(due_date, 'mm/dd/yyyy'),reading, amount, cubic_meters, status from bills
+   SELECT bill_id,TO_CHAR(date_of_bill, 'mm/dd/yyyy'),TO_CHAR(due_date, 'mm/dd/yyyy'),reading, amount, cubic_meters, status, arrears from bills
    where b_userID::text = par_id and newly_added = false;
 $$
  language 'sql';
@@ -220,7 +220,7 @@ language 'sql';
 
 create or replace function activation_status(in par_boolean boolean, out text, out text) returns setof record as
   $$
-  select concat(lastname, ', ', firstname), activation_code from account where activation_status = par_boolean
+  select concat(lastname, ', ', firstname), activation_code from account where activation_status = par_boolean and admin_prev = false
   $$
 language 'sql';
 
@@ -381,6 +381,15 @@ LANGUAGE plpgsql;
 create or replace function get_all_mobile(out text) returns setof text as
 $$
 	select mobile_num from account where activation_status = true and mobile_num is not null
+$$
+language 'sql';
+
+create or replace function get_disconnection(out int, out text, out text, out text, out text, out bigint) returns setof record as
+$$
+	select acc_id, lastname, firstname, address, mobile_num, count(status) from account, bills
+	where b_userid = acc_id and status = 'Unpaid' and newly_added = false
+	group by acc_id
+	having count(case when status = 'Unpaid' then 1 end) >= 3
 $$
 language 'sql';
 
