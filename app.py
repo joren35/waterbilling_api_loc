@@ -332,6 +332,27 @@ def send_announcement():
     return 'OK'
 
 
+@app.route('/sms/disconnection', methods=['POST'])
+def send_sms_disconnection():
+    res = spcall('get_disconnection_sms', (), )
+    for r in res:
+        headers = {'content-type': 'application/json; charset=utf-8', 'dataType': "json", 'Authorization': sms_auth}
+        resp = requests.post("https://smsgateway.me/api/v4/message/send", headers=headers,
+                             json=[{
+                                 "phone_number": r[0],
+                                 'message': "You currently have " + str(r[1]) + " UNPAID bills in a total of Php" + str(r[2]) + ". Please settle the amount to avoid disconnection. Please visit www.oursite.com for more info. Thank you \n \n -DFRAS WaterBilling System",
+                                 "device_id": 104258
+                             }])
+        data = resp.json()
+        m_id = data[0]['id']
+        resp2 = requests.get("https://smsgateway.me/api/v4/message/" + str(m_id),
+                             headers={'dataType': "json", 'Authorization': sms_auth})
+        data2 = resp2.json()
+
+    # return jsonify({'data': data2})
+    return 'OK'
+
+
 @app.route('/bill/date/add', methods=['POST'])
 def new_billingdate():
     params = request.get_json()
@@ -401,8 +422,47 @@ def get_disconnection():
 
     recs = []
     for r in res:
-        recs.append({"lastname": r[0], "firstname": r[1], "address": r[2], "mobile": r[3], "unpaid_count": r[4]})
+        recs.append({"lastname": r[0], "firstname": r[1], "address": r[2], "amount": str(r[3]), "unpaid_count": r[4]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
+
+@app.route('/account/update/name', methods=['POST'])
+def update_name():
+    params = request.get_json()
+    acc_id = params["acc_id"]
+    acc_fname = params["firstname"]
+    acc_lname = params["lastname"]
+    res = spcall('edit_name', (acc_id, acc_fname, acc_lname), True)
+
+    if 'Error' in res[0][0]:
+        return jsonify({'status': 'error', 'message': res[0][0]})
+    else:
+        return jsonify({'status': 'ok', 'message': res[0][0]})
+
+
+@app.route('/account/update/mobile', methods=['POST'])
+def update_mobile():
+    params = request.get_json()
+    acc_id = params["acc_id"]
+    acc_mobile = params["mobile_num"]
+    res = spcall('edit_mobile', (acc_id,acc_mobile), True)
+
+    if 'Error' in res[0][0]:
+        return jsonify({'status': 'error', 'message': res[0][0]})
+    else:
+        return jsonify({'status': 'ok', 'message': res[0][0]})
+
+
+@app.route('/account/update/password', methods=['POST'])
+def update_password():
+    params = request.get_json()
+    acc_id = params["acc_id"]
+    acc_pass = params["password"]
+    res = spcall('edit_password', (acc_id, acc_pass), True)
+
+    if 'Error' in res[0][0]:
+        return jsonify({'status': 'error', 'message': res[0][0]})
+    else:
+        return jsonify({'status': 'ok', 'message': res[0][0]})
 
 
 @app.after_request

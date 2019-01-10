@@ -384,10 +384,70 @@ $$
 $$
 language 'sql';
 
-create or replace function get_disconnection(out int, out text, out text, out text, out text, out bigint) returns setof record as
+create or replace function get_disconnection(out text, out text, out text, out numeric, out bigint) returns setof record as
 $$
-	select acc_id, lastname, firstname, address, mobile_num, count(status) from account, bills
+	select lastname, firstname, address, sum(amount), count(status) from account, bills
 	where b_userid = acc_id and status = 'Unpaid' and newly_added = false
+	group by acc_id
+	having count(case when status = 'Unpaid' then 1 end) >= 3
+$$
+language 'sql';
+
+
+create or replace function edit_acc(in par_id int, in par_lastname text, in par_firstname text, in par_password text, in par_mobile_num text) returns text as
+$$
+  declare
+    loc_res text;
+  begin
+    update account set firstname=par_firstname, lastname=par_lastname, password=par_password, mobile_num=par_mobile_num
+    where acc_id=par_id;
+    loc_res = 'ok';
+    return loc_res;
+  end;
+$$
+LANGUAGE plpgsql;
+
+create or replace function edit_name(in par_id int, in par_firstname text, in par_lastname text) returns text as
+$$
+  declare
+    loc_res text;
+  begin
+	update account set firstname = par_firstname, lastname = par_lastname where acc_id = par_id;
+	loc_res = 'ok';
+    return loc_res;
+  end;
+$$
+LANGUAGE plpgsql;
+
+create or replace function edit_mobile(in par_id int, in par_mobile text) returns text as
+$$
+  declare
+    loc_res text;
+  begin
+	update account set mobile_num = par_mobile where acc_id = par_id;
+	loc_res = 'ok';
+    return loc_res;
+  end;
+$$
+LANGUAGE plpgsql;
+
+create or replace function edit_password(in par_id int, in par_password text) returns text as
+$$
+  declare
+    loc_res text;
+  begin
+	update account set password = par_password where acc_id = par_id;
+	loc_res = 'ok';
+    return loc_res;
+  end;
+$$
+LANGUAGE plpgsql;
+
+create or replace function get_disconnection_sms(out text, out bigint, out numeric) returns setof record as
+$$
+	select mobile_num, count(status), sum(amount) from account, bills
+	where b_userid = acc_id and status = 'Unpaid' and newly_added = false and admin_prev = false
+		and activation_status = true and mobile_num is not null
 	group by acc_id
 	having count(case when status = 'Unpaid' then 1 end) >= 3
 $$
