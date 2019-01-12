@@ -13,3 +13,6 @@ class DBconn:
 
     def dbcommit(self):
         self.trans.commit()
+
+    def dbclose(self):
+        self.conn.close()

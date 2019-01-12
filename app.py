@@ -18,6 +18,8 @@ def spcall(qry, param, commit=False):
         res = cursor.fetchall()
         if commit:
             dbo.dbcommit()
+        else:
+            dbo.dbclose()
         return res
     except:
         res = [("Error: " + str(sys.exc_info()[0]) + " " + str(sys.exc_info()[1]),)]
@@ -26,7 +28,8 @@ def spcall(qry, param, commit=False):
 
 @app.route('/')
 def index():
-    return "<h2>Welcome to WaterBillingAPI<h2>"
+    return "<h2>Welcome to WaterBillingAPI <br>/registration_admin/username/first_name/last_name/password/mobile_num/string:address <h2>"
+
 
 
 @app.route('/login', methods=['POST'])
@@ -84,24 +87,24 @@ def add_account():
         return jsonify({'status': 'ok', 'user': res[0][0]})
 
 
-@app.route('/registration_admin', methods=['POST'])
-def register_admin():
-    params = request.get_json()
-    username = params["username"]
-    first_name = params["first_name"]
-    last_name = params["last_name"]
-    password = params["password"]
-    mobile_num = params["mobile_num"]
-    admin_prev = params["admin_prev"]
-    address = params["address"]
-    g_name = params["group_name"]
-    res = spcall('register_admin', (username, first_name, last_name, password, mobile_num, admin_prev, g_name, address),
+@app.route('/registration_admin/<string:username>/<string:first_name>/<string:last_name>/<string:password>/<string:mobile_num>/<string:address>', methods=['POST', 'GET'])
+def register_admin(username,first_name,last_name,password,mobile_num,address):
+    # params = request.get_json()
+    # username = params["username"]
+    # first_name = params["first_name"]
+    # last_name = params["last_name"]
+    # password = params["password"]
+    # mobile_num = params["mobile_num"]
+    # admin_prev = params["admin_prev"]
+    # address = params["address"]
+    # g_name = params["group_name"]
+    res = spcall('register_admin', (username, first_name, last_name, password, mobile_num, True, 'None', address),
                  True)
 
     if 'Error' in res[0][0]:
         return jsonify({'status': 'error', 'message': res[0][0]})
     else:
-        return res[0][0]
+        return jsonify({'status': 'ok', 'user': res[0][0]})
 
 
 @app.route('/user/<string:id>', methods=['GET'])
@@ -280,8 +283,7 @@ def send_sms_all():
                              headers={'dataType': "json", 'Authorization': sms_auth})
         data2 = resp2.json()
 
-    # return jsonify({'data': data2})
-    return 'OK'
+    return jsonify({'status': 'ok', 'response': data2})
 
 
 @app.route('/sms/date', methods=['POST'])
@@ -305,8 +307,7 @@ def send_sms_date():
                              headers={'dataType': "json", 'Authorization': sms_auth})
         data2 = resp2.json()
 
-    # return jsonify({'data': data2})
-    return 'OK'
+    return jsonify({'status': 'ok', 'response': data2})
 
 
 @app.route('/sms/announcement', methods=['POST'])
@@ -328,8 +329,7 @@ def send_announcement():
                              headers={'dataType': "json", 'Authorization': sms_auth})
         data2 = resp2.json()
 
-    # return jsonify({'data': data2})
-    return 'OK'
+    return jsonify({'status': 'ok', 'response': data2})
 
 
 @app.route('/sms/disconnection', methods=['POST'])
@@ -349,8 +349,7 @@ def send_sms_disconnection():
                              headers={'dataType': "json", 'Authorization': sms_auth})
         data2 = resp2.json()
 
-    # return jsonify({'data': data2})
-    return 'OK'
+    return jsonify({'status': 'ok', 'response': data2})
 
 
 @app.route('/bill/date/add', methods=['POST'])
@@ -425,6 +424,7 @@ def get_disconnection():
         recs.append({"lastname": r[0], "firstname": r[1], "address": r[2], "amount": str(r[3]), "unpaid_count": r[4]})
     return jsonify({'status': 'ok', 'entries': recs, 'count': len(recs)})
 
+
 @app.route('/account/update/name', methods=['POST'])
 def update_name():
     params = request.get_json()
@@ -466,19 +466,12 @@ def update_password():
 
 
 @app.after_request
-def add_cors(resp):
-    resp.headers['Access-Control-Allow-Origin'] = flask.request.headers.get(
-        'Origin', '*')
-    resp.headers['Access-Control-Allow-Credentials'] = True
-    resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS, GET, PUT, DELETE'
-    resp.headers['Access-Control-Allow-Headers'] = flask.request.headers.get('Access-Control-Request-Headers',
-                                                                             'Authorization')
-
-    # set low for debugging
-
-    if app.debug:
-        resp.headers["Access-Control-Max-Age"] = '1'
-    return resp
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Connection')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', True)
+    return response
 
 
 if __name__ == '__main__':
